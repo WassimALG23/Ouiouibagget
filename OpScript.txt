@@ -1,0 +1,183 @@
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local LocalPlayer = Players.LocalPlayer
+local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "AutoCraftingGui"
+screenGui.ResetOnSpawn = false
+screenGui.Parent = PlayerGui
+
+local mainFrame = Instance.new("Frame")
+mainFrame.Name = "MainFrame"
+mainFrame.Size = UDim2.new(0, 180, 0, 120)
+mainFrame.Position = UDim2.new(0.5, -90, 0.5, -60)
+mainFrame.BackgroundColor3 = Color3.fromRGB(30, 40, 60)
+mainFrame.BorderSizePixel = 0
+mainFrame.Active = true
+mainFrame.Draggable = true
+mainFrame.Parent = screenGui
+
+local title = Instance.new("TextLabel")
+title.Name = "TitleLabel"
+title.Size = UDim2.new(1, -60, 0, 30)
+title.Position = UDim2.new(0, 6, 0, 0)
+title.BackgroundColor3 = Color3.fromRGB(20, 30, 50)
+title.Text = "🌱 Auto Craft"
+title.TextColor3 = Color3.fromRGB(230, 240, 255)
+title.Font = Enum.Font.GothamBold
+title.TextSize = 16
+title.TextXAlignment = Enum.TextXAlignment.Left
+title.BorderSizePixel = 0
+title.Parent = mainFrame
+
+local closeBtn = Instance.new("TextButton")
+closeBtn.Size = UDim2.new(0, 24, 0, 24)
+closeBtn.Position = UDim2.new(1, -28, 0, 3)
+closeBtn.Text = "✕"
+closeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+closeBtn.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
+closeBtn.Font = Enum.Font.GothamBold
+closeBtn.TextSize = 16
+closeBtn.Parent = mainFrame
+closeBtn.MouseButton1Click:Connect(function()
+	screenGui:Destroy()
+end)
+
+local minimizeBtn = Instance.new("TextButton")
+minimizeBtn.Size = UDim2.new(0, 24, 0, 24)
+minimizeBtn.Position = UDim2.new(1, -56, 0, 3)
+minimizeBtn.Text = "–"
+minimizeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+minimizeBtn.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
+minimizeBtn.Font = Enum.Font.GothamBold
+minimizeBtn.TextSize = 20
+minimizeBtn.Parent = mainFrame
+
+local toggleBtn = Instance.new("TextButton")
+toggleBtn.Name = "ToggleBtn"
+toggleBtn.Size = UDim2.new(1, -20, 0, 38)
+toggleBtn.Position = UDim2.new(0, 10, 1, -48)
+toggleBtn.BackgroundColor3 = Color3.fromRGB(75, 170, 85)
+toggleBtn.Text = "Start"
+toggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+toggleBtn.Font = Enum.Font.GothamBold
+toggleBtn.TextSize = 16
+toggleBtn.Parent = mainFrame
+
+local minimized = false
+minimizeBtn.MouseButton1Click:Connect(function()
+	if minimized then
+		mainFrame.Size = UDim2.new(0, 180, 0, 120)
+		toggleBtn.Visible = true
+		minimized = false
+	else
+		mainFrame.Size = UDim2.new(0, 180, 0, 30)
+		toggleBtn.Visible = false
+		minimized = true
+	end
+end)
+
+local running = false
+local toolNamePrefix = "Flower Seed Pack"
+
+local craftingPath = workspace:WaitForChild("Interaction", 9e9)
+	:WaitForChild("UpdateItems", 9e9)
+	:WaitForChild("NewCrafting", 9e9)
+	:WaitForChild("SeedEventCraftingWorkBench", 9e9)
+
+local craftEvent = ReplicatedStorage:WaitForChild("GameEvents", 9e9)
+	:WaitForChild("CraftingGlobalObjectService", 9e9)
+
+local function hasSeedTool()
+	local backpack = LocalPlayer:FindFirstChild("Backpack")
+	if not backpack then return false end
+	for _, tool in ipairs(backpack:GetChildren()) do
+		if tool:IsA("Tool") and tool.Name:sub(1, #toolNamePrefix) == toolNamePrefix then
+			return true
+		end
+	end
+	return false
+end
+
+local function waitForNoCraftingGui()
+	local bench = craftingPath:WaitForChild("SeedEventCraftingWorkBench")
+	local model = bench:WaitForChild("Model")
+	local table = model:WaitForChild("BenchTable")
+	while running and table:FindFirstChild("CraftingBillboardGui") do
+		task.wait(1)
+	end
+end
+
+local function equipTool()
+	local backpack = LocalPlayer:WaitForChild("Backpack")
+	local character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+	for _, tool in ipairs(backpack:GetChildren()) do
+		if tool:IsA("Tool") and tool.Name:sub(1, #toolNamePrefix) == toolNamePrefix then
+			local humanoid = character:FindFirstChildOfClass("Humanoid")
+			if humanoid then
+				humanoid:EquipTool(tool)
+				return true
+			end
+		end
+	end
+	return false
+end
+
+local function unequipTool()
+	local character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+	for _, tool in ipairs(character:GetChildren()) do
+		if tool:IsA("Tool") and tool.Name:sub(1, #toolNamePrefix) == toolNamePrefix then
+			tool.Parent = LocalPlayer.Backpack
+			return true
+		end
+	end
+	return false
+end
+
+local function triggerProximity()
+	local prompt = craftingPath.SeedEventCraftingWorkBench.Model.BenchTable:WaitForChild("CraftingProximityPrompt")
+	prompt.MaxActivationDistance = math.huge
+	prompt:InputHoldBegin()
+	prompt:InputHoldEnd()
+end
+
+local function automateCrafting()
+	while running do
+		if not hasSeedTool() then
+			task.wait(1)
+			continue
+		end
+
+		waitForNoCraftingGui()
+
+		craftEvent:FireServer("Claim", craftingPath, "SeedEventWorkbench", 1)
+		task.wait(0.5)
+
+		craftEvent:FireServer("SetRecipe", craftingPath, "SeedEventWorkbench", "Crafters Seed Pack")
+		task.wait(0.5)
+
+		equipTool()
+		task.wait(1)
+
+		triggerProximity()
+		task.wait(1)
+
+		unequipTool()
+
+		craftEvent:FireServer("Craft", craftingPath, "SeedEventWorkbench")
+		task.wait(1)
+	end
+end
+
+toggleBtn.MouseButton1Click:Connect(function()
+	running = not running
+	if running then
+		toggleBtn.Text = "Stop"
+		toggleBtn.BackgroundColor3 = Color3.fromRGB(170, 75, 75)
+		task.spawn(automateCrafting)
+	else
+		toggleBtn.Text = "Start"
+		toggleBtn.BackgroundColor3 = Color3.fromRGB(75, 170, 85)
+	end
+end)
