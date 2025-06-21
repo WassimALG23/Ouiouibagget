@@ -54,22 +54,20 @@ minimizeBtn.Font = Enum.Font.GothamBold
 minimizeBtn.TextSize = 20
 minimizeBtn.Parent = mainFrame
 
-local toggleBtn = Instance.new("ImageButton")
+-- State Toggle (On/Off style)
+local toggleState = Instance.new("BoolValue")
+toggleState.Value = false
+
+local toggleBtn = Instance.new("TextButton")
 toggleBtn.Name = "ToggleBtn"
 toggleBtn.Size = UDim2.new(1, -20, 0, 38)
 toggleBtn.Position = UDim2.new(0, 10, 1, -58)
 toggleBtn.BackgroundColor3 = Color3.fromRGB(75, 170, 85)
-toggleBtn.ImageTransparency = 1
+toggleBtn.Text = "Start"
+toggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+toggleBtn.Font = Enum.Font.GothamBold
+toggleBtn.TextSize = 16
 toggleBtn.Parent = mainFrame
-
-local toggleLabel = Instance.new("TextLabel")
-toggleLabel.Size = UDim2.new(1, 0, 1, 0)
-toggleLabel.BackgroundTransparency = 1
-toggleLabel.Text = "Start"
-toggleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-toggleLabel.Font = Enum.Font.GothamBold
-toggleLabel.TextSize = 16
-toggleLabel.Parent = toggleBtn
 
 local statusLabel = Instance.new("TextLabel")
 statusLabel.Name = "StatusLabel"
@@ -98,9 +96,8 @@ minimizeBtn.MouseButton1Click:Connect(function()
 	end
 end)
 
-local running = false
+-- Tool and Craft Setup
 local toolNamePrefix = "Flower Seed Pack"
-
 local craftingPath = workspace:WaitForChild("Interaction", 9e9)
 	:WaitForChild("UpdateItems", 9e9)
 	:WaitForChild("NewCrafting", 9e9)
@@ -124,7 +121,7 @@ local function waitForNoCraftingGui()
 	local bench = craftingPath:WaitForChild("SeedEventCraftingWorkBench")
 	local model = bench:WaitForChild("Model")
 	local table = model:WaitForChild("BenchTable")
-	while running and table:FindFirstChild("CraftingBillboardGui") do
+	while toggleState.Value and table:FindFirstChild("CraftingBillboardGui") do
 		task.wait(1)
 	end
 end
@@ -163,7 +160,7 @@ local function triggerProximity()
 end
 
 local function automateCrafting()
-	while running do
+	while toggleState.Value do
 		if not hasSeedTool() then
 			statusLabel.Text = "No Seed Tool found."
 			task.wait(1)
@@ -200,23 +197,16 @@ local function automateCrafting()
 end
 
 toggleBtn.MouseButton1Click:Connect(function()
-	if running then
-		running = false
-		toggleLabel.Text = "Start"
-		toggleBtn.BackgroundColor3 = Color3.fromRGB(75, 170, 85)
-		statusLabel.Text = "Stopping..."
-	else
-		running = true
-		toggleLabel.Text = "Stop"
-		toggleBtn.BackgroundColor3 = Color3.fromRGB(170, 75, 75)
-		statusLabel.Text = "Auto-crafting started..."
+	toggleState.Value = not toggleState.Value
 
-		task.spawn(function()
-			automateCrafting()
-			toggleLabel.Text = "Start"
-			toggleBtn.BackgroundColor3 = Color3.fromRGB(75, 170, 85)
-			statusLabel.Text = "idle - made by dead"
-			running = false
-		end)
+	if toggleState.Value then
+		toggleBtn.Text = "Stop"
+		toggleBtn.BackgroundColor3 = Color3.fromRGB(170, 75, 75)
+		statusLabel.Text = "Starting auto-craft..."
+		task.spawn(automateCrafting)
+	else
+		toggleBtn.Text = "Start"
+		toggleBtn.BackgroundColor3 = Color3.fromRGB(75, 170, 85)
+		statusLabel.Text = "Stopped"
 	end
 end)
