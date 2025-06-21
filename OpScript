@@ -1,61 +1,216 @@
--- ✅ FINAL MERGED AUTO CRAFTER using UUID to equip Bee Egg
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local LocalPlayer = Players.LocalPlayer
+local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 
-local Players = game:GetService("Players") local ReplicatedStorage = game:GetService("ReplicatedStorage") local LocalPlayer = Players.LocalPlayer local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "AutoCraftingGui"
+screenGui.ResetOnSpawn = false
+screenGui.Parent = PlayerGui
 
--- 🧠 UUID of the correct Bee Egg to equip local targetUUID = "{49eb4ea3-c571-4ec1-be49-862a4a02275a}"  -- Change if needed
+local mainFrame = Instance.new("Frame")
+mainFrame.Name = "MainFrame"
+mainFrame.Size = UDim2.new(0, 180, 0, 140)
+mainFrame.Position = UDim2.new(0.5, -90, 0.5, -70)
+mainFrame.BackgroundColor3 = Color3.fromRGB(30, 40, 60)
+mainFrame.BorderSizePixel = 0
+mainFrame.Active = true
+mainFrame.Draggable = true
+mainFrame.Parent = screenGui
 
--- 📦 Paths local craftingSeedPath = workspace:WaitForChild("Interaction"):WaitForChild("UpdateItems"):WaitForChild("NewCrafting"):WaitForChild("SeedEventCraftingWorkBench") local craftingEggPath = workspace:WaitForChild("Interaction"):WaitForChild("UpdateItems"):WaitForChild("NewCrafting"):WaitForChild("EventCraftingWorkBench") local craftEvent = ReplicatedStorage:WaitForChild("GameEvents"):WaitForChild("CraftingGlobalObjectService")
+local title = Instance.new("TextLabel")
+title.Name = "TitleLabel"
+title.Size = UDim2.new(1, -60, 0, 30)
+title.Position = UDim2.new(0, 6, 0, 0)
+title.BackgroundColor3 = Color3.fromRGB(20, 30, 50)
+title.Text = "Auto Crafter"
+title.TextColor3 = Color3.fromRGB(230, 240, 255)
+title.Font = Enum.Font.GothamBold
+title.TextSize = 16
+title.TextXAlignment = Enum.TextXAlignment.Left
+title.BorderSizePixel = 0
+title.Parent = mainFrame
 
--- 👁️ GUI Setup local screenGui = Instance.new("ScreenGui") screenGui.Name = "AutoCraftingGui" screenGui.ResetOnSpawn = false screenGui.Parent = PlayerGui
+local closeBtn = Instance.new("TextButton")
+closeBtn.Size = UDim2.new(0, 24, 0, 24)
+closeBtn.Position = UDim2.new(1, -28, 0, 3)
+closeBtn.Text = "✕"
+closeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+closeBtn.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
+closeBtn.Font = Enum.Font.GothamBold
+closeBtn.TextSize = 16
+closeBtn.Parent = mainFrame
+closeBtn.MouseButton1Click:Connect(function()
+	screenGui:Destroy()
+end)
 
-local mainFrame = Instance.new("Frame") mainFrame.Size = UDim2.new(0, 220, 0, 200) mainFrame.Position = UDim2.new(0.5, -110, 0.5, -100) mainFrame.BackgroundColor3 = Color3.fromRGB(30, 40, 60) mainFrame.Active = true mainFrame.Draggable = true mainFrame.Parent = screenGui
+local minimizeBtn = Instance.new("TextButton")
+minimizeBtn.Size = UDim2.new(0, 24, 0, 24)
+minimizeBtn.Position = UDim2.new(1, -56, 0, 3)
+minimizeBtn.Text = "–"
+minimizeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+minimizeBtn.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
+minimizeBtn.Font = Enum.Font.GothamBold
+minimizeBtn.TextSize = 20
+minimizeBtn.Parent = mainFrame
 
-local title = Instance.new("TextLabel") title.Size = UDim2.new(1, -10, 0, 28) title.Position = UDim2.new(0, 5, 0, 2) title.BackgroundTransparency = 1 title.Text = "Auto Crafter (UUID)" title.TextColor3 = Color3.new(1, 1, 1) title.Font = Enum.Font.GothamBold title.TextSize = 16 title.TextXAlignment = Enum.TextXAlignment.Left title.Parent = mainFrame
+local toggleBtn = Instance.new("TextButton")
+toggleBtn.Name = "ToggleBtn"
+toggleBtn.Size = UDim2.new(1, -20, 0, 38)
+toggleBtn.Position = UDim2.new(0, 10, 1, -58)
+toggleBtn.BackgroundColor3 = Color3.fromRGB(75, 170, 85)
+toggleBtn.Text = "Start"
+toggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+toggleBtn.Font = Enum.Font.GothamBold
+toggleBtn.TextSize = 16
+toggleBtn.Parent = mainFrame
 
-local statusLabel = Instance.new("TextLabel") statusLabel.Size = UDim2.new(1, -20, 0, 50) statusLabel.Position = UDim2.new(0, 10, 1, -60) statusLabel.BackgroundTransparency = 1 statusLabel.TextColor3 = Color3.fromRGB(255, 255, 255) statusLabel.TextWrapped = true statusLabel.TextXAlignment = Enum.TextXAlignment.Left statusLabel.Font = Enum.Font.Gotham statusLabel.TextSize = 14 statusLabel.Text = "Idle" statusLabel.Parent = mainFrame
+local statusLabel = Instance.new("TextLabel")
+statusLabel.Name = "StatusLabel"
+statusLabel.Size = UDim2.new(1, -20, 0, 20)
+statusLabel.Position = UDim2.new(0, 10, 1, -90)
+statusLabel.BackgroundTransparency = 1
+statusLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+statusLabel.Font = Enum.Font.Gotham
+statusLabel.TextSize = 14
+statusLabel.Text = "idle - made by dead"
+statusLabel.TextXAlignment = Enum.TextXAlignment.Left
+statusLabel.Parent = mainFrame
 
-local seedBtn = Instance.new("TextButton") seedBtn.Size = UDim2.new(1, -20, 0, 36) seedBtn.Position = UDim2.new(0, 10, 0, 40) seedBtn.BackgroundColor3 = Color3.fromRGB(75, 170, 85) seedBtn.Text = "Start - Seed Pack" seedBtn.Font = Enum.Font.GothamBold seedBtn.TextSize = 14 seedBtn.TextColor3 = Color3.new(1,1,1) seedBtn.Parent = mainFrame
+local minimized = false
+minimizeBtn.MouseButton1Click:Connect(function()
+	if minimized then
+		mainFrame.Size = UDim2.new(0, 180, 0, 140)
+		toggleBtn.Visible = true
+		statusLabel.Visible = true
+		minimized = false
+	else
+		mainFrame.Size = UDim2.new(0, 180, 0, 30)
+		toggleBtn.Visible = false
+		statusLabel.Visible = false
+		minimized = true
+	end
+end)
 
-local eggBtn = Instance.new("TextButton") eggBtn.Size = UDim2.new(1, -20, 0, 36) eggBtn.Position = UDim2.new(0, 10, 0, 90) eggBtn.BackgroundColor3 = Color3.fromRGB(255, 200, 0) eggBtn.Text = "Start - Anti Bee Egg" eggBtn.Font = Enum.Font.GothamBold eggBtn.TextSize = 14 eggBtn.TextColor3 = Color3.new(0,0,0) eggBtn.Parent = mainFrame
+local running = false
+local toolNamePrefix = "Flower Seed Pack"
 
--- 🧠 Functions to equip/unequip using UUID local function findToolByUUID() local backpack = LocalPlayer:WaitForChild("Backpack") for _, tool in ipairs(backpack:GetChildren()) do if tool:IsA("Tool") and tool:GetAttribute("UUID") == targetUUID then return tool end end return nil end
+local craftingPath = workspace:WaitForChild("Interaction", 9e9)
+	:WaitForChild("UpdateItems", 9e9)
+	:WaitForChild("NewCrafting", 9e9)
+	:WaitForChild("SeedEventCraftingWorkBench", 9e9)
 
-local function equipToolByUUID() local tool = findToolByUUID() if not tool then return false end local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait() local humanoid = char:FindFirstChildOfClass("Humanoid") if humanoid then humanoid:EquipTool(tool) return true end return false end
+local craftEvent = ReplicatedStorage:WaitForChild("GameEvents", 9e9)
+	:WaitForChild("CraftingGlobalObjectService", 9e9)
 
-local function unequipToolByUUID() local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait() for _, tool in ipairs(char:GetChildren()) do if tool:IsA("Tool") and tool:GetAttribute("UUID") == targetUUID then tool.Parent = LocalPlayer.Backpack return true end end return false end
-
-local function waitForCraftingClear(path) while path.Model.BenchTable:FindFirstChild("CraftingBillboardGui") do statusLabel.Text = "Waiting for long craft to finish..." task.wait(5) end end
-
-local function triggerPrompt(path) local prompt = path.Model.BenchTable:FindFirstChild("CraftingProximityPrompt") if prompt then fireproximityprompt(prompt, 1) end end
-
--- 🔁 Crafting Loops local seedRunning = false local function seedLoop() while seedRunning do statusLabel.Text = "[Seed] Starting..." craftEvent:FireServer("Claim", craftingSeedPath, "SeedEventWorkbench", 1) task.wait(0.5) craftEvent:FireServer("SetRecipe", craftingSeedPath, "SeedEventWorkbench", "Crafters Seed Pack") task.wait(0.5) craftEvent:FireServer("Craft", craftingSeedPath, "SeedEventWorkbench") statusLabel.Text = "[Seed] Crafted!" task.wait(2) end statusLabel.Text = "Seed loop stopped." end
-
-local eggRunning = false local function eggLoop() while eggRunning do if not findToolByUUID() then statusLabel.Text = "[Egg] Tool w/ UUID not found!" task.wait(3) continue end
-
-craftEvent:FireServer("Claim", craftingEggPath, "GearEventWorkbench", 1)
-	task.wait(0.5)
-	craftEvent:FireServer("SetRecipe", craftingEggPath, "GearEventWorkbench", "Anti Bee Egg")
-	task.wait(0.5)
-
-	statusLabel.Text = "[Egg] Equipping..."
-	equipToolByUUID()
-	task.wait(1)
-
-	statusLabel.Text = "[Egg] Triggering input prompt..."
-	triggerPrompt(craftingEggPath)
-	task.wait(1)
-
-	unequipToolByUUID()
-	waitForCraftingClear(craftingEggPath)
-
-	statusLabel.Text = "[Egg] Crafting final item..."
-	craftEvent:FireServer("Craft", craftingEggPath, "GearEventWorkbench")
-	task.wait(2)
+local function hasSeedTool()
+	local backpack = LocalPlayer:FindFirstChild("Backpack")
+	if not backpack then return false end
+	for _, tool in ipairs(backpack:GetChildren()) do
+		if tool:IsA("Tool") and tool.Name:sub(1, #toolNamePrefix) == toolNamePrefix then
+			return true
+		end
+	end
+	return false
 end
-statusLabel.Text = "Egg loop stopped."
 
+local function waitForNoCraftingGui()
+	local bench = craftingPath:WaitForChild("SeedEventCraftingWorkBench")
+	local model = bench:WaitForChild("Model")
+	local table = model:WaitForChild("BenchTable")
+	while running and table:FindFirstChild("CraftingBillboardGui") do
+		task.wait(1)
+	end
 end
 
--- 🔘 Button Logic seedBtn.MouseButton1Click:Connect(function() seedRunning = not seedRunning if seedRunning then seedBtn.Text = "Stop - Seed Pack" task.spawn(seedLoop) else seedBtn.Text = "Start - Seed Pack" end end)
+local function equipTool()
+	local backpack = LocalPlayer:WaitForChild("Backpack")
+	local character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+	for _, tool in ipairs(backpack:GetChildren()) do
+		if tool:IsA("Tool") and tool.Name:sub(1, #toolNamePrefix) == toolNamePrefix then
+			local humanoid = character:FindFirstChildOfClass("Humanoid")
+			if humanoid then
+				humanoid:EquipTool(tool)
+				return true
+			end
+		end
+	end
+	return false
+end
 
-eggBtn.MouseButton1Click:Connect(function() eggRunning = not eggRunning if eggRunning then eggBtn.Text = "Stop - Anti Bee Egg" task.spawn(eggLoop) else eggBtn.Text = "Start - Anti Bee Egg" end end)
+local function unequipTool()
+	local character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+	for _, tool in ipairs(character:GetChildren()) do
+		if tool:IsA("Tool") and tool.Name:sub(1, #toolNamePrefix) == toolNamePrefix then
+			tool.Parent = LocalPlayer.Backpack
+			return true
+		end
+	end
+	return false
+end
+
+local function triggerProximity()
+	local prompt = craftingPath.SeedEventCraftingWorkBench.Model.BenchTable:FindFirstChild("CraftingProximityPrompt")
+	if prompt and prompt:IsA("ProximityPrompt") then
+		fireproximityprompt(prompt, 1)
+	end
+end
+
+local function automateCrafting()
+	while running do
+		if not hasSeedTool() then
+			statusLabel.Text = "No Seed Tool found."
+			task.wait(1)
+			continue
+		end
+
+		statusLabel.Text = "Waiting for crafting to finish..."
+		waitForNoCraftingGui()
+
+		statusLabel.Text = "Claiming..."
+		craftEvent:FireServer("Claim", craftingPath, "SeedEventWorkbench", 1)
+		task.wait(0.5)
+
+		statusLabel.Text = "Setting recipe..."
+		craftEvent:FireServer("SetRecipe", craftingPath, "SeedEventWorkbench", "Crafters Seed Pack")
+		task.wait(0.5)
+
+		statusLabel.Text = "Equipping tool..."
+		equipTool()
+		task.wait(1)
+
+		statusLabel.Text = "Triggering proximity..."
+		triggerProximity()
+		task.wait(1)
+
+		statusLabel.Text = "Unequipping tool..."
+		unequipTool()
+
+		statusLabel.Text = "Crafting..."
+		craftEvent:FireServer("Craft", craftingPath, "SeedEventWorkbench")
+		task.wait(1)
+	end
+	statusLabel.Text = "idle - made by dead"
+end
+
+toggleBtn.MouseButton1Click:Connect(function()
+	if running then
+		running = false
+		toggleBtn.Text = "Start"
+		toggleBtn.BackgroundColor3 = Color3.fromRGB(75, 170, 85)
+		statusLabel.Text = "Stopping..."
+	else
+		running = true
+		toggleBtn.Text = "Stop"
+		toggleBtn.BackgroundColor3 = Color3.fromRGB(170, 75, 75)
+		statusLabel.Text = "Auto-crafting started..."
+
+		task.spawn(function()
+			automateCrafting()
+			toggleBtn.Text = "Start"
+			toggleBtn.BackgroundColor3 = Color3.fromRGB(75, 170, 85)
+			statusLabel.Text = "idle - made by dead"
+			running = false
+		end)
+	end
+end)
