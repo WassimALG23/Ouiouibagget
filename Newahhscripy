@@ -1,169 +1,141 @@
+-- Ensure Rayfield is in ReplicatedStorage (adjust path as needed)
+local Rayfield = loadstring(game:HttpGet("https://raw.githubusercontent.com/shlexware/Rayfield/main/source"))()
+
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local LocalPlayer = Players.LocalPlayer
-local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+local playerGui = LocalPlayer:WaitForChild("PlayerGui")
 
--- Destroy old GUI if it exists
-local existing = PlayerGui:FindFirstChild("AutoCraftingGui")
-if existing then existing:Destroy() end
+-- Setup Rayfield window
+local Window = Rayfield:CreateWindow({
+    Name = "Auto Crafter",
+    LoadingTitle = "Auto Crafter",
+    LoadingSubtitle = "by dead",
+    ConfigurationSaving = { Enabled = false },
+})
 
--- GUI
-local screenGui = Instance.new("ScreenGui", PlayerGui)
-screenGui.Name = "AutoCraftingGui"
-screenGui.ResetOnSpawn = false
+-- Add toggle switch
+local toggle = Window:CreateToggle({
+    Name = "Auto Craft Enabled",
+    CurrentValue = false,
+    Flag = "autoCraftToggle",
+    Callback = function(value)
+        running = value
+        if value then
+            statusLabel.Text = "Status: Running"
+            task.spawn(automate)
+        else
+            statusLabel.Text = "Status: Idle"
+        end
+    end
+})
 
-local frame = Instance.new("Frame", screenGui)
-frame.Size = UDim2.new(0, 220, 0, 160)
-frame.Position = UDim2.new(0.5, -110, 0.5, -80)
-frame.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
-frame.BorderSizePixel = 0
-frame.Active = true
-frame.Draggable = true
+-- Status label
+local statusLabel = Rayfield:CreateLabel({
+    Name = "Status",
+    Value = "Status: Idle",
+})
 
-local title = Instance.new("TextLabel", frame)
-title.Size = UDim2.new(1, 0, 0, 30)
-title.Text = "🌱 Auto Crafter"
-title.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
-title.TextColor3 = Color3.fromRGB(255, 255, 255)
-title.Font = Enum.Font.GothamBold
-title.TextSize = 18
-title.TextXAlignment = Enum.TextXAlignment.Center
-
-local statusLabel = Instance.new("TextLabel", frame)
-statusLabel.Position = UDim2.new(0, 10, 0, 40)
-statusLabel.Size = UDim2.new(1, -20, 0, 30)
-statusLabel.Text = "Status: idle"
-statusLabel.BackgroundTransparency = 1
-statusLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
-statusLabel.Font = Enum.Font.Gotham
-statusLabel.TextSize = 14
-statusLabel.TextXAlignment = Enum.TextXAlignment.Left
-
-local toggleBtn = Instance.new("TextButton", frame)
-toggleBtn.Position = UDim2.new(0, 20, 1, -60)
-toggleBtn.Size = UDim2.new(1, -40, 0, 40)
-toggleBtn.Text = "Start"
-toggleBtn.BackgroundColor3 = Color3.fromRGB(60, 170, 80)
-toggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-toggleBtn.Font = Enum.Font.GothamBold
-toggleBtn.TextSize = 18
-toggleBtn.AutoButtonColor = true
-
--- State
+-- Crafting constants
 local running = false
 local toolNamePrefix = "Flower Seed Pack"
 
 local craftingPath = workspace:WaitForChild("Interaction", 9e9)
-	:WaitForChild("UpdateItems", 9e9)
-	:WaitForChild("NewCrafting", 9e9)
-	:WaitForChild("SeedEventCraftingWorkBench", 9e9)
+    :WaitForChild("UpdateItems", 9e9)
+    :WaitForChild("NewCrafting", 9e9)
+    :WaitForChild("SeedEventCraftingWorkBench", 9e9)
 
 local craftEvent = ReplicatedStorage:WaitForChild("GameEvents", 9e9)
-	:WaitForChild("CraftingGlobalObjectService", 9e9)
+    :WaitForChild("CraftingGlobalObjectService", 9e9)
 
--- Utils
+-- Utility functions
 local function hasSeedTool()
-	local backpack = LocalPlayer:FindFirstChild("Backpack")
-	if not backpack then return false end
-	for _, tool in ipairs(backpack:GetChildren()) do
-		if tool:IsA("Tool") and tool.Name:sub(1, #toolNamePrefix) == toolNamePrefix then
-			return true
-		end
-	end
-	return false
+    local backpack = LocalPlayer:FindFirstChild("Backpack")
+    if not backpack then return false end
+    for _, tool in ipairs(backpack:GetChildren()) do
+        if tool:IsA("Tool") and tool.Name:sub(1, #toolNamePrefix) == toolNamePrefix then
+            return true
+        end
+    end
+    return false
 end
 
 local function equipTool()
-	local backpack = LocalPlayer:WaitForChild("Backpack")
-	local character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-	for _, tool in ipairs(backpack:GetChildren()) do
-		if tool:IsA("Tool") and tool.Name:sub(1, #toolNamePrefix) == toolNamePrefix then
-			local humanoid = character:FindFirstChildOfClass("Humanoid")
-			if humanoid then
-				humanoid:EquipTool(tool)
-				return true
-			end
-		end
-	end
-	return false
+    local backpack = LocalPlayer:WaitForChild("Backpack")
+    local character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+    for _, tool in ipairs(backpack:GetChildren()) do
+        if tool:IsA("Tool") and tool.Name:sub(1, #toolNamePrefix) == toolNamePrefix then
+            local humanoid = character:FindFirstChildOfClass("Humanoid")
+            if humanoid then
+                humanoid:EquipTool(tool)
+                return true
+            end
+        end
+    end
+    return false
 end
 
 local function unequipTool()
-	local character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-	for _, tool in ipairs(character:GetChildren()) do
-		if tool:IsA("Tool") and tool.Name:sub(1, #toolNamePrefix) == toolNamePrefix then
-			tool.Parent = LocalPlayer.Backpack
-			return true
-		end
-	end
-	return false
+    local character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+    for _, tool in ipairs(character:GetChildren()) do
+        if tool:IsA("Tool") and tool.Name:sub(1, #toolNamePrefix) == toolNamePrefix then
+            tool.Parent = LocalPlayer.Backpack
+            return true
+        end
+    end
+    return false
 end
 
 local function triggerProximity()
-	local prompt = craftingPath.SeedEventCraftingWorkBench.Model.BenchTable:FindFirstChild("CraftingProximityPrompt")
-	if prompt and prompt:IsA("ProximityPrompt") then
-		fireproximityprompt(prompt)
-	end
+    local prompt = craftingPath.SeedEventCraftingWorkBench.Model.BenchTable:FindFirstChild("CraftingProximityPrompt")
+    if prompt and prompt:IsA("ProximityPrompt") then
+        fireproximityprompt(prompt)
+    end
 end
 
 local function waitForNoCraftingGui()
-	local bench = craftingPath:WaitForChild("SeedEventCraftingWorkBench")
-	local model = bench:WaitForChild("Model")
-	local table = model:WaitForChild("BenchTable")
-	while running and table:FindFirstChild("CraftingBillboardGui") do
-		task.wait(1)
-	end
+    local bench = craftingPath:WaitForChild("SeedEventCraftingWorkBench")
+    local model = bench:WaitForChild("Model")
+    local table = model:WaitForChild("BenchTable")
+    while running and table:FindFirstChild("CraftingBillboardGui") do
+        task.wait(1)
+    end
 end
 
--- Main Loop
-local function automate()
-	while running do
-		if not hasSeedTool() then
-			statusLabel.Text = "Status: No tool"
-			task.wait(1)
-			continue
-		end
+-- Main automation loop
+function automate()
+    while running do
+        if not hasSeedTool() then
+            statusLabel:SetValue("Status: No Tool")
+            task.wait(1)
+            continue
+        end
 
-		statusLabel.Text = "Status: Waiting..."
-		waitForNoCraftingGui()
+        statusLabel:SetValue("Status: Waiting...")
+        waitForNoCraftingGui()
 
-		statusLabel.Text = "Status: Claiming"
-		craftEvent:FireServer("Claim", craftingPath, "SeedEventWorkbench", 1)
-		task.wait(0.5)
+        statusLabel:SetValue("Status: Claiming")
+        craftEvent:FireServer("Claim", craftingPath, "SeedEventWorkbench", 1)
+        task.wait(0.5)
 
-		statusLabel.Text = "Status: Setting recipe"
-		craftEvent:FireServer("SetRecipe", craftingPath, "SeedEventWorkbench", "Crafters Seed Pack")
-		task.wait(0.5)
+        statusLabel:SetValue("Status: Setting Recipe")
+        craftEvent:FireServer("SetRecipe", craftingPath, "SeedEventWorkbench", "Crafters Seed Pack")
+        task.wait(0.5)
 
-		statusLabel.Text = "Status: Equipping"
-		equipTool()
-		task.wait(1)
+        statusLabel:SetValue("Status: Equipping")
+        equipTool()
+        task.wait(1)
 
-		statusLabel.Text = "Status: Triggering"
-		triggerProximity()
-		task.wait(1)
+        statusLabel:SetValue("Status: Triggering")
+        triggerProximity()
+        task.wait(1)
 
-		statusLabel.Text = "Status: Unequipping"
-		unequipTool()
+        statusLabel:SetValue("Status: Unequipping")
+        unequipTool()
 
-		statusLabel.Text = "Status: Crafting"
-		craftEvent:FireServer("Craft", craftingPath, "SeedEventWorkbench")
-		task.wait(1)
-	end
-	statusLabel.Text = "Status: idle"
+        statusLabel:SetValue("Status: Crafting")
+        craftEvent:FireServer("Craft", craftingPath, "SeedEventWorkbench")
+        task.wait(1)
+    end
+    statusLabel:SetValue("Status: Idle")
 end
-
--- Toggle
-toggleBtn.Activated:Connect(function()
-	running = not running
-	if running then
-		toggleBtn.Text = "Stop"
-		toggleBtn.BackgroundColor3 = Color3.fromRGB(180, 50, 50)
-		statusLabel.Text = "Status: Running"
-		task.spawn(automate)
-	else
-		toggleBtn.Text = "Start"
-		toggleBtn.BackgroundColor3 = Color3.fromRGB(60, 170, 80)
-		statusLabel.Text = "Status: idle"
-	end
-end)
