@@ -54,10 +54,6 @@ minimizeBtn.Font = Enum.Font.GothamBold
 minimizeBtn.TextSize = 20
 minimizeBtn.Parent = mainFrame
 
--- State Toggle (On/Off style)
-local toggleState = Instance.new("BoolValue")
-toggleState.Value = false
-
 local toggleBtn = Instance.new("TextButton")
 toggleBtn.Name = "ToggleBtn"
 toggleBtn.Size = UDim2.new(1, -20, 0, 38)
@@ -96,8 +92,8 @@ minimizeBtn.MouseButton1Click:Connect(function()
 	end
 end)
 
--- Tool and Craft Setup
 local toolNamePrefix = "Flower Seed Pack"
+
 local craftingPath = workspace:WaitForChild("Interaction", 9e9)
 	:WaitForChild("UpdateItems", 9e9)
 	:WaitForChild("NewCrafting", 9e9)
@@ -105,6 +101,10 @@ local craftingPath = workspace:WaitForChild("Interaction", 9e9)
 
 local craftEvent = ReplicatedStorage:WaitForChild("GameEvents", 9e9)
 	:WaitForChild("CraftingGlobalObjectService", 9e9)
+
+-- Toggle state using BoolValue
+local toggleState = Instance.new("BoolValue")
+toggleState.Value = false
 
 local function hasSeedTool()
 	local backpack = LocalPlayer:FindFirstChild("Backpack")
@@ -198,11 +198,10 @@ end
 
 toggleBtn.MouseButton1Click:Connect(function()
 	toggleState.Value = not toggleState.Value
-
 	if toggleState.Value then
 		toggleBtn.Text = "Stop"
 		toggleBtn.BackgroundColor3 = Color3.fromRGB(170, 75, 75)
-		statusLabel.Text = "Starting auto-craft..."
+		statusLabel.Text = "Started"
 		task.spawn(automateCrafting)
 	else
 		toggleBtn.Text = "Start"
