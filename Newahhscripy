@@ -3,95 +3,54 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local LocalPlayer = Players.LocalPlayer
 local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 
-local screenGui = Instance.new("ScreenGui")
+-- Destroy old GUI if it exists
+local existing = PlayerGui:FindFirstChild("AutoCraftingGui")
+if existing then existing:Destroy() end
+
+-- GUI
+local screenGui = Instance.new("ScreenGui", PlayerGui)
 screenGui.Name = "AutoCraftingGui"
 screenGui.ResetOnSpawn = false
-screenGui.Parent = PlayerGui
 
-local mainFrame = Instance.new("Frame")
-mainFrame.Name = "MainFrame"
-mainFrame.Size = UDim2.new(0, 180, 0, 140)
-mainFrame.Position = UDim2.new(0.5, -90, 0.5, -70)
-mainFrame.BackgroundColor3 = Color3.fromRGB(30, 40, 60)
-mainFrame.BorderSizePixel = 0
-mainFrame.Active = true
-mainFrame.Draggable = true
-mainFrame.Parent = screenGui
+local frame = Instance.new("Frame", screenGui)
+frame.Size = UDim2.new(0, 220, 0, 160)
+frame.Position = UDim2.new(0.5, -110, 0.5, -80)
+frame.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
+frame.BorderSizePixel = 0
+frame.Active = true
+frame.Draggable = true
 
-local title = Instance.new("TextLabel")
-title.Name = "TitleLabel"
-title.Size = UDim2.new(1, -60, 0, 30)
-title.Position = UDim2.new(0, 6, 0, 0)
-title.BackgroundColor3 = Color3.fromRGB(20, 30, 50)
-title.Text = "Auto Crafter"
-title.TextColor3 = Color3.fromRGB(230, 240, 255)
+local title = Instance.new("TextLabel", frame)
+title.Size = UDim2.new(1, 0, 0, 30)
+title.Text = "🌱 Auto Crafter"
+title.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
+title.TextColor3 = Color3.fromRGB(255, 255, 255)
 title.Font = Enum.Font.GothamBold
-title.TextSize = 16
-title.TextXAlignment = Enum.TextXAlignment.Left
-title.BorderSizePixel = 0
-title.Parent = mainFrame
+title.TextSize = 18
+title.TextXAlignment = Enum.TextXAlignment.Center
 
-local closeBtn = Instance.new("TextButton")
-closeBtn.Size = UDim2.new(0, 24, 0, 24)
-closeBtn.Position = UDim2.new(1, -28, 0, 3)
-closeBtn.Text = "✕"
-closeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-closeBtn.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
-closeBtn.Font = Enum.Font.GothamBold
-closeBtn.TextSize = 16
-closeBtn.Parent = mainFrame
-closeBtn.MouseButton1Click:Connect(function()
-	screenGui:Destroy()
-end)
-
-local minimizeBtn = Instance.new("TextButton")
-minimizeBtn.Size = UDim2.new(0, 24, 0, 24)
-minimizeBtn.Position = UDim2.new(1, -56, 0, 3)
-minimizeBtn.Text = "–"
-minimizeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-minimizeBtn.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
-minimizeBtn.Font = Enum.Font.GothamBold
-minimizeBtn.TextSize = 20
-minimizeBtn.Parent = mainFrame
-
-local toggleBtn = Instance.new("TextButton")
-toggleBtn.Name = "ToggleBtn"
-toggleBtn.Size = UDim2.new(1, -20, 0, 38)
-toggleBtn.Position = UDim2.new(0, 10, 1, -58)
-toggleBtn.BackgroundColor3 = Color3.fromRGB(75, 170, 85)
-toggleBtn.Text = "Start"
-toggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-toggleBtn.Font = Enum.Font.GothamBold
-toggleBtn.TextSize = 16
-toggleBtn.Parent = mainFrame
-
-local statusLabel = Instance.new("TextLabel")
-statusLabel.Name = "StatusLabel"
-statusLabel.Size = UDim2.new(1, -20, 0, 20)
-statusLabel.Position = UDim2.new(0, 10, 1, -90)
+local statusLabel = Instance.new("TextLabel", frame)
+statusLabel.Position = UDim2.new(0, 10, 0, 40)
+statusLabel.Size = UDim2.new(1, -20, 0, 30)
+statusLabel.Text = "Status: idle"
 statusLabel.BackgroundTransparency = 1
 statusLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
 statusLabel.Font = Enum.Font.Gotham
 statusLabel.TextSize = 14
-statusLabel.Text = "idle - made by dead"
 statusLabel.TextXAlignment = Enum.TextXAlignment.Left
-statusLabel.Parent = mainFrame
 
-local minimized = false
-minimizeBtn.MouseButton1Click:Connect(function()
-	if minimized then
-		mainFrame.Size = UDim2.new(0, 180, 0, 140)
-		toggleBtn.Visible = true
-		statusLabel.Visible = true
-		minimized = false
-	else
-		mainFrame.Size = UDim2.new(0, 180, 0, 30)
-		toggleBtn.Visible = false
-		statusLabel.Visible = false
-		minimized = true
-	end
-end)
+local toggleBtn = Instance.new("TextButton", frame)
+toggleBtn.Position = UDim2.new(0, 20, 1, -60)
+toggleBtn.Size = UDim2.new(1, -40, 0, 40)
+toggleBtn.Text = "Start"
+toggleBtn.BackgroundColor3 = Color3.fromRGB(60, 170, 80)
+toggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+toggleBtn.Font = Enum.Font.GothamBold
+toggleBtn.TextSize = 18
+toggleBtn.AutoButtonColor = true
 
+-- State
+local running = false
 local toolNamePrefix = "Flower Seed Pack"
 
 local craftingPath = workspace:WaitForChild("Interaction", 9e9)
@@ -102,10 +61,7 @@ local craftingPath = workspace:WaitForChild("Interaction", 9e9)
 local craftEvent = ReplicatedStorage:WaitForChild("GameEvents", 9e9)
 	:WaitForChild("CraftingGlobalObjectService", 9e9)
 
--- Toggle state using BoolValue
-local toggleState = Instance.new("BoolValue")
-toggleState.Value = false
-
+-- Utils
 local function hasSeedTool()
 	local backpack = LocalPlayer:FindFirstChild("Backpack")
 	if not backpack then return false end
@@ -115,15 +71,6 @@ local function hasSeedTool()
 		end
 	end
 	return false
-end
-
-local function waitForNoCraftingGui()
-	local bench = craftingPath:WaitForChild("SeedEventCraftingWorkBench")
-	local model = bench:WaitForChild("Model")
-	local table = model:WaitForChild("BenchTable")
-	while toggleState.Value and table:FindFirstChild("CraftingBillboardGui") do
-		task.wait(1)
-	end
 end
 
 local function equipTool()
@@ -155,57 +102,68 @@ end
 local function triggerProximity()
 	local prompt = craftingPath.SeedEventCraftingWorkBench.Model.BenchTable:FindFirstChild("CraftingProximityPrompt")
 	if prompt and prompt:IsA("ProximityPrompt") then
-		fireproximityprompt(prompt, 1)
+		fireproximityprompt(prompt)
 	end
 end
 
-local function automateCrafting()
-	while toggleState.Value do
+local function waitForNoCraftingGui()
+	local bench = craftingPath:WaitForChild("SeedEventCraftingWorkBench")
+	local model = bench:WaitForChild("Model")
+	local table = model:WaitForChild("BenchTable")
+	while running and table:FindFirstChild("CraftingBillboardGui") do
+		task.wait(1)
+	end
+end
+
+-- Main Loop
+local function automate()
+	while running do
 		if not hasSeedTool() then
-			statusLabel.Text = "No Seed Tool found."
+			statusLabel.Text = "Status: No tool"
 			task.wait(1)
 			continue
 		end
 
-		statusLabel.Text = "Waiting for crafting to finish..."
+		statusLabel.Text = "Status: Waiting..."
 		waitForNoCraftingGui()
 
-		statusLabel.Text = "Claiming..."
+		statusLabel.Text = "Status: Claiming"
 		craftEvent:FireServer("Claim", craftingPath, "SeedEventWorkbench", 1)
 		task.wait(0.5)
 
-		statusLabel.Text = "Setting recipe..."
+		statusLabel.Text = "Status: Setting recipe"
 		craftEvent:FireServer("SetRecipe", craftingPath, "SeedEventWorkbench", "Crafters Seed Pack")
 		task.wait(0.5)
 
-		statusLabel.Text = "Equipping tool..."
+		statusLabel.Text = "Status: Equipping"
 		equipTool()
 		task.wait(1)
 
-		statusLabel.Text = "Triggering proximity..."
+		statusLabel.Text = "Status: Triggering"
 		triggerProximity()
 		task.wait(1)
 
-		statusLabel.Text = "Unequipping tool..."
+		statusLabel.Text = "Status: Unequipping"
 		unequipTool()
 
-		statusLabel.Text = "Crafting..."
+		statusLabel.Text = "Status: Crafting"
 		craftEvent:FireServer("Craft", craftingPath, "SeedEventWorkbench")
 		task.wait(1)
 	end
-	statusLabel.Text = "idle - made by dead"
+	statusLabel.Text = "Status: idle"
 end
 
-toggleBtn.MouseButton1Click:Connect(function()
-	toggleState.Value = not toggleState.Value
-	if toggleState.Value then
+-- Toggle
+toggleBtn.Activated:Connect(function()
+	running = not running
+	if running then
 		toggleBtn.Text = "Stop"
-		toggleBtn.BackgroundColor3 = Color3.fromRGB(170, 75, 75)
-		statusLabel.Text = "Started"
-		task.spawn(automateCrafting)
+		toggleBtn.BackgroundColor3 = Color3.fromRGB(180, 50, 50)
+		statusLabel.Text = "Status: Running"
+		task.spawn(automate)
 	else
 		toggleBtn.Text = "Start"
-		toggleBtn.BackgroundColor3 = Color3.fromRGB(75, 170, 85)
-		statusLabel.Text = "Stopped"
+		toggleBtn.BackgroundColor3 = Color3.fromRGB(60, 170, 80)
+		statusLabel.Text = "Status: idle"
 	end
 end)
