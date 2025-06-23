@@ -1,0 +1,81 @@
+local Library = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
+local Window = Library:CreateWindow({
+    Title = "🥕 Auto Seed Buyer",
+    SubTitle = "Made by Zoro",
+    TabWidth = 160,
+    Size = UDim2.fromOffset(500, 350),
+    Acrylic = true,
+    Theme = "Dark",
+    MinimizeKey = Enum.KeyCode.RightControl
+})
+
+local MainTab = Window:AddTab({ Title = "Seeds", Icon = "🍀" })
+
+-- Seeds & State
+local seedOptions = {
+    "Carrot", "Strawberry", "Blueberry", "Tomato", "Cauliflower", "Avocado",
+    "Banana", "Green Apple", "Bell Pepper", "Kiwi", "Prickly Pear", "Loquat",
+    "Feijoa", "Sugar Apple"
+}
+
+local selectedSeeds = {}
+local isAutoBuying = false
+
+-- Helper: Update selected seeds list
+local function updateSeed(name)
+    for i, seed in ipairs(selectedSeeds) do
+        if seed == name then
+            table.remove(selectedSeeds, i)
+            return
+        end
+    end
+    table.insert(selectedSeeds, name)
+end
+
+-- Show selected seeds label
+local selectedLabel = MainTab:AddParagraph({
+    Title = "Selected Seeds",
+    Content = "None"
+})
+
+local function refreshLabel()
+    if #selectedSeeds == 0 then
+        selectedLabel:Set("None")
+    else
+        selectedLabel:Set(table.concat(selectedSeeds, ", "))
+    end
+end
+
+-- Add dropdown toggler
+MainTab:AddSection("🌱 Choose Seeds")
+for _, seed in ipairs(seedOptions) do
+    MainTab:AddButton({
+        Title = "Toggle " .. seed,
+        Description = "Click to add/remove this seed",
+        Callback = function()
+            updateSeed(seed)
+            refreshLabel()
+        end
+    })
+end
+
+-- Auto-buy toggle
+MainTab:AddSection("⚡ Auto Buy")
+MainTab:AddToggle({
+    Title = "Auto Buy (Ultra Fast)",
+    Default = false,
+    Callback = function(value)
+        isAutoBuying = value
+        if isAutoBuying then
+            task.spawn(function()
+                while isAutoBuying do
+                    for _, seed in ipairs(selectedSeeds) do
+                        local args = { seed }
+                        game:GetService("ReplicatedStorage"):WaitForChild("GameEvents"):WaitForChild("BuySeedStock"):FireServer(unpack(args))
+                    end
+                    task.wait(0.05) -- ultra fast (can be 0.01 if game allows)
+                end
+            end)
+        end
+    end
+})
