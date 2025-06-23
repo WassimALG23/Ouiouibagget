@@ -2,7 +2,7 @@ local Library = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent
 
 local Window = Library:CreateWindow({
 	Title = "🌱 Auto Seed Buyer",
-	SubTitle = "by Zoro",
+	SubTitle = "Made by Zoro",
 	TabWidth = 160,
 	Size = UDim2.fromOffset(500, 350),
 	Acrylic = true,
@@ -10,7 +10,7 @@ local Window = Library:CreateWindow({
 	MinimizeKey = Enum.KeyCode.RightControl
 })
 
-local MainTab = Window:AddTab({ Title = "Seeds", Icon = "🌾" })
+local MainTab = Window:AddTab({ Title = "Seeds", Icon = "🧪" })
 
 -- Seed list
 local seedOptions = {
@@ -19,47 +19,40 @@ local seedOptions = {
 	"Prickly Pear", "Loquat", "Feijoa", "Sugar Apple"
 }
 
--- Track selected seeds
+-- Track selected seeds (as keys)
 local selectedSeeds = {}
 
--- Helper functions
-local function updateSelectedSeeds(seed)
-	for i, s in ipairs(selectedSeeds) do
-		if s == seed then
-			table.remove(selectedSeeds, i)
-			return
-		end
-	end
-	table.insert(selectedSeeds, seed)
-end
-
-local function getSelectedList()
-	if #selectedSeeds == 0 then
-		return "None"
-	else
-		return table.concat(selectedSeeds, ", ")
-	end
-end
-
--- Label to show selection
-local selectionLabel = MainTab:AddParagraph({
+-- Label to show selected
+local selectedLabel = MainTab:AddParagraph({
 	Title = "Selected Seeds",
 	Content = "None"
 })
 
--- Dropdown to add/remove seeds
+-- Helper to update selected list text
+local function updateSelectedLabel()
+	local list = {}
+	for seed, selected in pairs(selectedSeeds) do
+		if selected then
+			table.insert(list, seed)
+		end
+	end
+	selectedLabel:Set(#list > 0 and table.concat(list, ", ") or "None")
+end
+
+-- Dropdown: simulate multi-select via internal table
 MainTab:AddDropdown({
-	Title = "🎯 Select Seeds",
+	Title = "🎯 Select a Seed",
 	Values = seedOptions,
 	Multi = false,
 	Default = "",
-	Callback = function(selected)
-		updateSelectedSeeds(selected)
-		selectionLabel:Set(getSelectedList())
+	Callback = function(seed)
+		if not seed then return end
+		selectedSeeds[seed] = not selectedSeeds[seed] -- toggle selection
+		updateSelectedLabel()
 	end
 })
 
--- Toggle for auto-buy
+-- Auto-buy toggle
 local isAutoBuying = false
 
 MainTab:AddToggle({
@@ -70,11 +63,13 @@ MainTab:AddToggle({
 		if isAutoBuying then
 			task.spawn(function()
 				while isAutoBuying do
-					for _, seed in ipairs(selectedSeeds) do
-						local args = { seed }
-						game:GetService("ReplicatedStorage"):WaitForChild("GameEvents"):WaitForChild("BuySeedStock"):FireServer(unpack(args))
+					for seed, selected in pairs(selectedSeeds) do
+						if selected then
+							local args = { seed }
+							game:GetService("ReplicatedStorage"):WaitForChild("GameEvents"):WaitForChild("BuySeedStock"):FireServer(unpack(args))
+						end
 					end
-					task.wait(0.05) -- very fast loop
+					task.wait(0.05) -- ultra fast
 				end
 			end)
 		end
