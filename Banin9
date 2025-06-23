@@ -1,0 +1,77 @@
+local Library = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
+
+local Window = Library:CreateWindow({
+	Title = "🌱 Auto Seed Buyer",
+	SubTitle = "Made by Zoro",
+	TabWidth = 160,
+	Size = UDim2.fromOffset(500, 350),
+	Acrylic = true,
+	Theme = "Dark",
+	MinimizeKey = Enum.KeyCode.RightControl
+})
+
+local MainTab = Window:AddTab({ Title = "Seeds", Icon = "🧪" })
+
+-- Seed list
+local seedOptions = {
+	"Carrot", "Strawberry", "Blueberry", "Tomato", "Cauliflower",
+	"Avocado", "Banana", "Green Apple", "Bell Pepper", "Kiwi",
+	"Prickly Pear", "Loquat", "Feijoa", "Sugar Apple"
+}
+
+-- Track selected seeds (as keys)
+local selectedSeeds = {}
+
+-- Label to show selected
+local selectedLabel = MainTab:AddParagraph({
+	Title = "Selected Seeds",
+	Content = "None"
+})
+
+-- Helper to update selected list text
+local function updateSelectedLabel()
+	local list = {}
+	for seed, selected in pairs(selectedSeeds) do
+		if selected then
+			table.insert(list, seed)
+		end
+	end
+	selectedLabel:Set(#list > 0 and table.concat(list, ", ") or "None")
+end
+
+-- Dropdown: simulate multi-select via internal table
+MainTab:AddDropdown({
+	Title = "🎯 Select a Seed",
+	Values = seedOptions,
+	Multi = false,
+	Default = "",
+	Callback = function(seed)
+		if not seed then return end
+		selectedSeeds[seed] = not selectedSeeds[seed] -- toggle selection
+		updateSelectedLabel()
+	end
+})
+
+-- Auto-buy toggle
+local isAutoBuying = false
+
+MainTab:AddToggle({
+	Title = "⚡ Auto Buy Enabled",
+	Default = false,
+	Callback = function(state)
+		isAutoBuying = state
+		if isAutoBuying then
+			task.spawn(function()
+				while isAutoBuying do
+					for seed, selected in pairs(selectedSeeds) do
+						if selected then
+							local args = { seed }
+							game:GetService("ReplicatedStorage"):WaitForChild("GameEvents"):WaitForChild("BuySeedStock"):FireServer(unpack(args))
+						end
+					end
+					task.wait(0.05) -- ultra fast
+				end
+			end)
+		end
+	end
+})
