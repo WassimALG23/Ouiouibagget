@@ -1,73 +1,77 @@
-local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
-
-local Window = Rayfield:CreateWindow({
-	Name = "Fast Seed Buyer",
-	LoadingTitle = "Launching...",
-	LoadingSubtitle = "by Zoro",
-	ConfigurationSaving = {
-		Enabled = false
-	}
+local Library = loadstring(game:HttpGet("https://github.com/1dontgiveaf/Fluent/releases/latest/download/main.lua"))()
+local Window = Library:Window({
+    Title = "🥕 Auto Buy Seeds",
+    SubTitle = "by Zoro",
+    TabWidth = 160,
+    Size = UDim2.fromOffset(500, 400),
+    Acrylic = true,
+    Theme = "Dark",
+    MinimizeKey = Enum.KeyCode.RightControl
 })
 
-local MainTab = Window:CreateTab("Buy Seeds", 4483362458)
-MainTab:CreateSection("Select Seeds")
+local MainTab = Window:Tab({ Title = "Seeds", Icon = "leaf" })
 
+local selectedSeeds = {}
 local seedOptions = {
-	"Carrot",
-	"Strawberry",
-	"Blueberry",
-	"Tomato",
-	"Cauliflower",
-	"Avocado",
-	"Banana",
-	"Green Apple",
-	"Bell Pepper",
-	"Kiwi",
-	"Prickly Pear",
-	"Loquat",
-	"Feijoa",
-	"Sugar Apple"
+    "Carrot", "Strawberry", "Blueberry", "Tomato", "Cauliflower", "Avocado",
+    "Banana", "Green Apple", "Bell Pepper", "Kiwi", "Prickly Pear", "Loquat",
+    "Feijoa", "Sugar Apple"
 }
 
--- Track selected seeds
-local selectedSeeds = {}
-for _, seed in ipairs(seedOptions) do
-	selectedSeeds[seed] = false
+-- Label to show selected seeds
+local selectedLabel = MainTab:Label("Selected: None")
+
+-- Function to update label text
+local function updateSelectedLabel()
+    if #selectedSeeds == 0 then
+        selectedLabel:Set("Selected: None")
+    else
+        selectedLabel:Set("Selected: " .. table.concat(selectedSeeds, ", "))
+    end
 end
 
--- Create toggles for each seed
+-- Dropdown (simulated with a button for each item)
+MainTab:Section("🎯 Choose Seeds")
 for _, seed in ipairs(seedOptions) do
-	MainTab:CreateToggle({
-		Name = seed,
-		CurrentValue = false,
-		Callback = function(state)
-			selectedSeeds[seed] = state
-		end
-	})
+    MainTab:Button({
+        Title = "Toggle " .. seed,
+        Description = "Click to add/remove " .. seed,
+        Callback = function()
+            local exists = false
+            for i, v in ipairs(selectedSeeds) do
+                if v == seed then
+                    table.remove(selectedSeeds, i)
+                    exists = true
+                    break
+                end
+            end
+            if not exists then
+                table.insert(selectedSeeds, seed)
+            end
+            updateSelectedLabel()
+        end
+    })
 end
 
--- Looping toggle
-local autoBuy = false
+-- Auto-buy toggle
+MainTab:Section("⚡ Auto Buy")
+local isAutoBuying = false
 
-MainTab:CreateSection("Auto Buy")
-
-MainTab:CreateToggle({
-	Name = "⚡ Auto-Buy (Fast)",
-	CurrentValue = false,
-	Callback = function(value)
-		autoBuy = value
-		if autoBuy then
-			task.spawn(function()
-				while autoBuy do
-					for seed, isSelected in pairs(selectedSeeds) do
-						if isSelected then
-							local args = { seed }
-							game:GetService("ReplicatedStorage"):WaitForChild("GameEvents"):WaitForChild("BuySeedStock"):FireServer(unpack(args))
-						end
-					end
-					task.wait(0.05) -- very fast (adjust lower if needed)
-				end
-			end)
-		end
-	end
+MainTab:Toggle({
+    Title = "Auto Buy Selected Seeds (Fast)",
+    Default = false,
+    Callback = function(state)
+        isAutoBuying = state
+        if isAutoBuying then
+            task.spawn(function()
+                while isAutoBuying do
+                    for _, seed in ipairs(selectedSeeds) do
+                        local args = { seed }
+                        game:GetService("ReplicatedStorage"):WaitForChild("GameEvents"):WaitForChild("BuySeedStock"):FireServer(unpack(args))
+                    end
+                    task.wait(0.05) -- Very fast loop
+                end
+            end)
+        end
+    end
 })
