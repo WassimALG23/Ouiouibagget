@@ -1,0 +1,114 @@
+-- Clean up any old GUI
+pcall(function() game.CoreGui:FindFirstChild("CustomSeedGui"):Destroy() end)
+
+-- SERVICES
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Players = game:GetService("Players")
+local Player = Players.LocalPlayer
+
+-- GUI CREATION
+local ScreenGui = Instance.new("ScreenGui", game.CoreGui)
+ScreenGui.Name = "CustomSeedGui"
+ScreenGui.ResetOnSpawn = false
+
+local Frame = Instance.new("Frame", ScreenGui)
+Frame.Size = UDim2.new(0, 300, 0, 400)
+Frame.Position = UDim2.new(0, 20, 0.5, -200)
+Frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+Frame.BorderSizePixel = 0
+Frame.Name = "MainFrame"
+
+local UIListLayout = Instance.new("UIListLayout", Frame)
+UIListLayout.Padding = UDim.new(0, 6)
+
+local Title = Instance.new("TextLabel", Frame)
+Title.Size = UDim2.new(1, 0, 0, 30)
+Title.Text = "🌱 Seed Buyer by Zoro"
+Title.TextColor3 = Color3.new(1, 1, 1)
+Title.BackgroundTransparency = 1
+Title.Font = Enum.Font.GothamBold
+Title.TextSize = 18
+
+-- Seed list
+local seedOptions = {
+	"Carrot", "Strawberry", "Blueberry", "Tomato", "Cauliflower",
+	"Avocado", "Banana", "Green Apple", "Bell Pepper", "Kiwi",
+	"Prickly Pear", "Loquat", "Feijoa", "Sugar Apple"
+}
+
+-- Track selected seeds
+local selectedSeeds = {}
+
+-- Function to create a toggle
+local function createToggle(seedName)
+	local Toggle = Instance.new("TextButton", Frame)
+	Toggle.Size = UDim2.new(1, -10, 0, 25)
+	Toggle.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+	Toggle.TextColor3 = Color3.new(1, 1, 1)
+	Toggle.Font = Enum.Font.Gotham
+	Toggle.TextSize = 14
+	Toggle.Text = "❌ " .. seedName
+	Toggle.AutoButtonColor = false
+
+	local selected = false
+
+	Toggle.MouseButton1Click:Connect(function()
+		selected = not selected
+		selectedSeeds[seedName] = selected and true or nil
+		Toggle.Text = (selected and "✅ " or "❌ ") .. seedName
+	end)
+end
+
+-- Create all toggles
+for _, seed in ipairs(seedOptions) do
+	createToggle(seed)
+end
+
+-- Selected label
+local SelectedLabel = Instance.new("TextLabel", Frame)
+SelectedLabel.Size = UDim2.new(1, -10, 0, 40)
+SelectedLabel.TextWrapped = true
+SelectedLabel.BackgroundTransparency = 1
+SelectedLabel.TextColor3 = Color3.new(1, 1, 1)
+SelectedLabel.Font = Enum.Font.GothamBold
+SelectedLabel.TextSize = 14
+SelectedLabel.Text = "Selected: None"
+
+-- Update label every second
+task.spawn(function()
+	while true do
+		local list = {}
+		for seed, _ in pairs(selectedSeeds) do table.insert(list, seed) end
+		SelectedLabel.Text = "Selected: " .. (#list > 0 and table.concat(list, ", ") or "None")
+		task.wait(1)
+	end
+end)
+
+-- Auto-buy toggle
+local BuyToggle = Instance.new("TextButton", Frame)
+BuyToggle.Size = UDim2.new(1, -10, 0, 30)
+BuyToggle.Text = "▶️ Start Auto-Buy"
+BuyToggle.Font = Enum.Font.GothamBold
+BuyToggle.TextSize = 16
+BuyToggle.BackgroundColor3 = Color3.fromRGB(60, 100, 60)
+BuyToggle.TextColor3 = Color3.new(1, 1, 1)
+
+local isBuying = false
+
+BuyToggle.MouseButton1Click:Connect(function()
+	isBuying = not isBuying
+	BuyToggle.Text = isBuying and "⏹ Stop Auto-Buy" or "▶️ Start Auto-Buy"
+	BuyToggle.BackgroundColor3 = isBuying and Color3.fromRGB(150, 50, 50) or Color3.fromRGB(60, 100, 60)
+
+	if isBuying then
+		task.spawn(function()
+			while isBuying do
+				for seed, _ in pairs(selectedSeeds) do
+					local args = { seed }
+					ReplicatedStorage:WaitForChild("GameEvents"):WaitForChild("BuySeedStock"):FireServer(unpack(args))
+				end
+				task.wait(0.05) -- fast speed
+			end
+		end)
+	end
+end)
