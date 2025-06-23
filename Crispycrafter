@@ -1,161 +1,73 @@
-local Players = game:GetService("Players")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local LocalPlayer = Players.LocalPlayer
-local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
-local screenGui = Instance.new("ScreenGui", PlayerGui)
-screenGui.Name = "AutoCrafterGui"
-screenGui.ResetOnSpawn = false
+local Window = Rayfield:CreateWindow({
+	Name = "Fast Seed Buyer",
+	LoadingTitle = "Launching...",
+	LoadingSubtitle = "by Zoro",
+	ConfigurationSaving = {
+		Enabled = false
+	}
+})
 
-local frame = Instance.new("Frame", screenGui)
-frame.Size = UDim2.new(0, 200, 0, 120)
-frame.Position = UDim2.new(0.5, -100, 0.5, -60)
-frame.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
-frame.BorderSizePixel = 0
-frame.Active = true
-frame.Draggable = true
+local MainTab = Window:CreateTab("Buy Seeds", 4483362458)
+MainTab:CreateSection("Select Seeds")
 
-local title = Instance.new("TextLabel", frame)
-title.Size = UDim2.new(1, 0, 0, 30)
-title.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
-title.Text = "Auto Crafter"
-title.TextColor3 = Color3.fromRGB(255, 255, 255)
-title.Font = Enum.Font.GothamBold
-title.TextSize = 16
+local seedOptions = {
+	"Carrot",
+	"Strawberry",
+	"Blueberry",
+	"Tomato",
+	"Cauliflower",
+	"Avocado",
+	"Banana",
+	"Green Apple",
+	"Bell Pepper",
+	"Kiwi",
+	"Prickly Pear",
+	"Loquat",
+	"Feijoa",
+	"Sugar Apple"
+}
 
-local toggleButton = Instance.new("TextButton", frame)
-toggleButton.Position = UDim2.new(0.5, -60, 0, 40)
-toggleButton.Size = UDim2.new(0, 120, 0, 40)
-toggleButton.BackgroundColor3 = Color3.fromRGB(70, 160, 80)
-toggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-toggleButton.Font = Enum.Font.GothamBold
-toggleButton.TextSize = 18
-toggleButton.Text = "Start"
+-- Track selected seeds
+local selectedSeeds = {}
+for _, seed in ipairs(seedOptions) do
+	selectedSeeds[seed] = false
+end
 
-local statusLabel = Instance.new("TextLabel", frame)
-statusLabel.Position = UDim2.new(0, 0, 1, -20)
-statusLabel.Size = UDim2.new(1, 0, 0, 20)
-statusLabel.Text = "Status: Idle"
-statusLabel.BackgroundTransparency = 1
-statusLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
-statusLabel.Font = Enum.Font.Gotham
-statusLabel.TextSize = 14
+-- Create toggles for each seed
+for _, seed in ipairs(seedOptions) do
+	MainTab:CreateToggle({
+		Name = seed,
+		CurrentValue = false,
+		Callback = function(state)
+			selectedSeeds[seed] = state
+		end
+	})
+end
 
-local running = false
-local toolNamePrefix = "Flower Seed Pack"
+-- Looping toggle
+local autoBuy = false
 
--- Paths
-local craftingPath = workspace:WaitForChild("Interaction", 9e9)
-	:WaitForChild("UpdateItems", 9e9)
-	:WaitForChild("NewCrafting", 9e9)
-	:WaitForChild("SeedEventCraftingWorkBench", 9e9)
+MainTab:CreateSection("Auto Buy")
 
-local craftEvent = ReplicatedStorage:WaitForChild("GameEvents", 9e9)
-	:WaitForChild("CraftingGlobalObjectService", 9e9)
-
--- Helper functions
-local function hasSeedTool()
-	local backpack = LocalPlayer:FindFirstChild("Backpack")
-	if not backpack then return false end
-	for _, tool in ipairs(backpack:GetChildren()) do
-		if tool:IsA("Tool") and tool.Name:sub(1, #toolNamePrefix) == toolNamePrefix then
-			return true
+MainTab:CreateToggle({
+	Name = "⚡ Auto-Buy (Fast)",
+	CurrentValue = false,
+	Callback = function(value)
+		autoBuy = value
+		if autoBuy then
+			task.spawn(function()
+				while autoBuy do
+					for seed, isSelected in pairs(selectedSeeds) do
+						if isSelected then
+							local args = { seed }
+							game:GetService("ReplicatedStorage"):WaitForChild("GameEvents"):WaitForChild("BuySeedStock"):FireServer(unpack(args))
+						end
+					end
+					task.wait(0.05) -- very fast (adjust lower if needed)
+				end
+			end)
 		end
 	end
-	return false
-end
-
-local function waitForNoCraftingGui()
-	local bench = craftingPath:WaitForChild("SeedEventCraftingWorkBench")
-	local model = bench:WaitForChild("Model")
-	local table = model:WaitForChild("BenchTable")
-	while running and table:FindFirstChild("CraftingBillboardGui") do
-		task.wait(1)
-	end
-end
-
-local function equipTool()
-	local backpack = LocalPlayer:WaitForChild("Backpack")
-	local character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-	for _, tool in ipairs(backpack:GetChildren()) do
-		if tool:IsA("Tool") and tool.Name:sub(1, #toolNamePrefix) == toolNamePrefix then
-			local humanoid = character:FindFirstChildOfClass("Humanoid")
-			if humanoid then
-				humanoid:EquipTool(tool)
-				return true
-			end
-		end
-	end
-	return false
-end
-
-local function unequipTool()
-	local character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-	for _, tool in ipairs(character:GetChildren()) do
-		if tool:IsA("Tool") and tool.Name:sub(1, #toolNamePrefix) == toolNamePrefix then
-			tool.Parent = LocalPlayer.Backpack
-			return true
-		end
-	end
-	return false
-end
-
-local function triggerProximity()
-	local prompt = craftingPath.SeedEventCraftingWorkBench.Model.BenchTable:FindFirstChild("CraftingProximityPrompt")
-	if prompt and prompt:IsA("ProximityPrompt") then
-		fireproximityprompt(prompt, 1)
-	end
-end
-
--- Crafting loop
-local function automateCrafting()
-	while running do
-		if not hasSeedTool() then
-			statusLabel.Text = "Status: No Seed Tool"
-			task.wait(1)
-			continue
-		end
-
-		statusLabel.Text = "Status: Waiting for bench"
-		waitForNoCraftingGui()
-
-		statusLabel.Text = "Status: Claiming"
-		craftEvent:FireServer("Claim", craftingPath, "SeedEventWorkbench", 1)
-		task.wait(0.5)
-
-		statusLabel.Text = "Status: SetRecipe"
-		craftEvent:FireServer("SetRecipe", craftingPath, "SeedEventWorkbench", "Crafters Seed Pack")
-		task.wait(0.5)
-
-		statusLabel.Text = "Status: Equip tool"
-		equipTool()
-		task.wait(1)
-
-		statusLabel.Text = "Status: Proximity"
-		triggerProximity()
-		task.wait(1)
-
-		statusLabel.Text = "Status: Unequip"
-		unequipTool()
-
-		statusLabel.Text = "Status: Crafting"
-		craftEvent:FireServer("Craft", craftingPath, "SeedEventWorkbench")
-		task.wait(1)
-	end
-	statusLabel.Text = "Status: Idle"
-end
-
--- Toggle button logic
-toggleButton.MouseButton1Click:Connect(function()
-	running = not running
-	if running then
-		toggleButton.Text = "Stop"
-		toggleButton.BackgroundColor3 = Color3.fromRGB(170, 60, 60)
-		statusLabel.Text = "Status: Starting..."
-		task.spawn(automateCrafting)
-	else
-		toggleButton.Text = "Start"
-		toggleButton.BackgroundColor3 = Color3.fromRGB(70, 160, 80)
-		statusLabel.Text = "Status: Idle"
-	end
-end)
+})
